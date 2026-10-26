@@ -1,0 +1,39 @@
+[package]
+name = "limarkto"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+authors = ["hypengw <hypengwip@gmail.com>"]
+
+[lib]
+name = "limarkto"
+module = "limarkto"
+archive = "limarkto"
+sources = [
+  "src/lib.cppm", "src/error.cppm", "src/document.cppm", "src/syntax.cppm", "src/parser.cppm",
+  "src/document.cpp", "src/syntax.cpp", "src/parser.cpp", "src/blocks.cpp",
+  "src/inlines.cpp", "src/extensions.cpp", "src/rewrite.cpp",
+]
+
+[profile.base]
+exceptions = false
+rtti = false
+
+[dependencies]
+rstd-parse = { version = "0.1.9", pub = true }
+rstd-std = { version = "0.1.9", pub = true }
+liunicode = { version = "0.1.0" }
+
+[dev-dependencies]
+rstd-json = { version = "0.1.9" }
+rstd-test = { version = "0.1.9" }
+rstd-nostd = { version = "0.1.9", usage = "link" }
+
+[[test]]
+name = "limarkto-tests"
+sources = ["tests/main.cpp", "tests/document.cpp", "tests/parser.cpp", "tests/rewrite.cpp", "tests/bounds.cpp", "tests/error.cpp", "tests/math.cpp", "tests/entities.cpp"]
+link-stdlib = false
+
+[[test]]
+name = "limarkto-commonmark"
+sources = ["tests/main.cpp", "tests/commonmark.cpp"]
+link-stdlib = false
