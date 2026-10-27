@@ -9,6 +9,7 @@ using SourceSpan = rstd::parse::Span;
 
 struct Extensions {
     bool                  tables {}, strikethrough {}, autolinks {}, tasklists {};
+    bool                  math {};
     static constexpr auto gfm() -> Extensions { return { true, true, true, true }; }
 };
 struct ParseOptions {
@@ -44,7 +45,9 @@ enum class NodeKind
     Strikethrough,
     Table,
     TableRow,
-    TableCell
+    TableCell,
+    InlineMath,
+    Math
 };
 enum class TableAlignment
 {
@@ -96,6 +99,7 @@ struct Node {
     Option<bool>    checked;
     TableAlignment  alignment { TableAlignment::None };
     bool            table_header {};
+    bool            closed { true };
 };
 struct ReferenceDefinition {
     String     label;

@@ -1,0 +1,27 @@
+[package]
+name = "limarkto-wasm"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+authors = ["hypengw <hypengwip@gmail.com>"]
+
+[[bin]]
+name = "limarkto"
+module = "limarkto.web"
+sources = ["src/main.cppm"]
+link-stdlib = false
+
+[profile.base]
+exceptions = false
+rtti = false
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+
+[dependencies]
+limarkto = "0.1.0"
+rstd-json = "0.1.9"
+wasmto = "0.1.0"
+wasmto-macro = "0.1.0"
+wasmto-bindgen = { version = "0.1.0", usage = "tool" }

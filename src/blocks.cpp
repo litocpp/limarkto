@@ -54,6 +54,12 @@ static auto fence(ref<str> text) -> Offset {
     if (c == '`' && cut(text, count, text.len().to_primitive())->contains("`"_str)) return 0;
     return count;
 }
+static auto math_fence(ref<str> text) -> Offset {
+    Offset count {};
+    while (byte(text, count) == '$') ++count;
+    if (count < 2 || cut(text, count, text.len().to_primitive())->contains("$"_str)) return 0;
+    return count;
+}
 static auto heading(ref<str> text) -> unsigned {
     unsigned level {};
     while (level < 7 && byte(text, level) == '#') ++level;
@@ -182,10 +188,35 @@ void Parser::blocks(Vec<Line> lines, NodeId parent, usize depth) {
             }
         }
         auto opening = indent < 4 ? fence(text) : 0;
+        auto math    = document_.options_.extensions.math && indent < 4 ? math_fence(text) : 0;
+        if (math) {
+            auto node        = add(NodeKind::Math, span, parent);
+            get(node).info   = decode(cut(text, math, text.len().to_primitive())->trim_ascii());
+            get(node).closed = false;
+            Vec<Line> body;
+            ++i;
+            while (i < lines.len() && ! lines[i].lazy && tick()) {
+                auto   next  = strip(lines[i], indentation(lines[i]));
+                auto   value = cut(source(), next.begin, next.end);
+                Offset count {};
+                while (byte(value, count) == '$') ++count;
+                if (indentation(lines[i]) < 4 && count >= math &&
+                    cut(value, count, value.len().to_primitive())->trim_ascii().is_empty()) {
+                    get(node).closed   = true;
+                    get(node).span.end = usize(lines[i++].end);
+                    break;
+                }
+                body.push(strip(lines[i], indent));
+                get(node).span.end = usize(lines[i++].end);
+            }
+            get(node).literal = literal_text(mapped(body.as_slice()).text.as_str());
+            continue;
+        }
         if (opening) {
             auto node           = add(NodeKind::CodeBlock, span, parent);
             auto info           = cut(text, opening, text.len().to_primitive())->trim_ascii();
             get(node).info      = decode(info);
+            get(node).closed    = false;
             auto      delimiter = byte(text, 0);
             Vec<Line> body;
             ++i;
@@ -197,6 +228,7 @@ void Parser::blocks(Vec<Line> lines, NodeId parent, usize depth) {
                 if (indentation(lines[i]) < 4 && count >= opening &&
                     cut(value, count, value.len().to_primitive())->trim_ascii().is_empty()) {
                     get(node).span.end = usize(lines[i++].end);
+                    get(node).closed   = true;
                     break;
                 }
                 auto content = strip(lines[i], indent);
@@ -278,7 +310,10 @@ void Parser::blocks(Vec<Line> lines, NodeId parent, usize depth) {
                             quote_fence = 0;
                         lazy = false;
                     } else {
-                        quote_fence     = content_indent < 4 ? fence(inline_text) : 0;
+                        quote_fence = content_indent < 4 ? fence(inline_text) : 0;
+                        if (! quote_fence && content_indent < 4 &&
+                            document_.options_.extensions.math)
+                            quote_fence = math_fence(inline_text);
                         quote_delimiter = byte(inline_text, 0);
                         lazy = ! value->trim_ascii().is_empty() && content_indent < 4 &&
                                ! quote_fence && ! heading(inline_text) && ! thematic(inline_text) &&
@@ -289,6 +324,8 @@ void Parser::blocks(Vec<Line> lines, NodeId parent, usize depth) {
                            (indentation(next) >= 4 ||
                             (! heading(cut(source(), content.begin, content.end)) &&
                              ! fence(cut(source(), content.begin, content.end)) &&
+                             ! (document_.options_.extensions.math &&
+                                math_fence(cut(source(), content.begin, content.end))) &&
                              ! thematic(cut(source(), content.begin, content.end)) &&
                              ! marker(cut(source(), content.begin, content.end)) &&
                              ! html_end(
@@ -390,9 +427,11 @@ void Parser::blocks(Vec<Line> lines, NodeId parent, usize depth) {
                         body.push(strip(next, width));
                         blank = false;
                     } else if (! blank &&
-                               (next_indent >= 4 || (! marker(next_text) && ! heading(next_text) &&
-                                                     ! fence(next_text) && ! thematic(next_text) &&
-                                                     byte(next_text, 0) != '>'))) {
+                               (next_indent >= 4 ||
+                                (! marker(next_text) && ! heading(next_text) &&
+                                 ! fence(next_text) &&
+                                 ! (document_.options_.extensions.math && math_fence(next_text)) &&
+                                 ! thematic(next_text) && byte(next_text, 0) != '>'))) {
                         body.push(Line(next));
                     } else
                         break;
@@ -469,9 +508,11 @@ void Parser::blocks(Vec<Line> lines, NodeId parent, usize depth) {
                 auto nonempty_item =
                     list &&
                     ! cut(value, list->width, value.len().to_primitive())->trim_ascii().is_empty();
-                if (! next.lazy && (heading(value) || fence(value) || thematic(value) ||
-                                    byte(value, 0) == '>' || html_end(value, true, budget_) ||
-                                    (nonempty_item && (! list->ordered || list->start == 1))))
+                if (! next.lazy &&
+                    (heading(value) || fence(value) ||
+                     (document_.options_.extensions.math && math_fence(value)) || thematic(value) ||
+                     byte(value, 0) == '>' || html_end(value, true, budget_) ||
+                     (nonempty_item && (! list->ordered || list->start == 1))))
                     break;
             }
             body.push(Line(content));

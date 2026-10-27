@@ -171,6 +171,46 @@ void Parser::inlines(NodeId            parent,
             at = copied = stop;
             continue;
         }
+        if (c == '$' && document_.options_.extensions.math) {
+            Offset count = 1;
+            while (at + count < end && byte(text, at + count) == '$') ++count;
+            auto close = at + count;
+            bool found {};
+            while (close < end && tick()) {
+                if (byte(text, close) != '$') {
+                    ++close;
+                    continue;
+                }
+                Offset run {};
+                while (close + run < end && byte(text, close + run) == '$') ++run;
+                if (run == count) {
+                    found = true;
+                    break;
+                }
+                close += run;
+            }
+            if (! found) {
+                at += count;
+                continue;
+            }
+            literal(copied, at);
+            auto   id = add(NodeKind::InlineMath, content.span(at, close + count), parent);
+            String value;
+            bool   non_space {};
+            for (auto cp : cut(text, at + count, close)->chars()) {
+                auto character = cp.to_primitive();
+                if (character != ' ' && character != '\n') non_space = true;
+                value.push(char32_t(character ? character : 0xfffd));
+            }
+            if (non_space && value.len() >= usize(2) &&
+                (byte(value.as_str(), 0) == ' ' || byte(value.as_str(), 0) == '\n') &&
+                (byte(value.as_str(), value.len().to_primitive() - 1) == ' ' ||
+                 byte(value.as_str(), value.len().to_primitive() - 1) == '\n'))
+                value = String::make(cut(value.as_str(), 1, value.len().to_primitive() - 1));
+            get(id).literal = rstd::move(value);
+            at = copied = close + count;
+            continue;
+        }
         if (c == '`') {
             auto count = Offset(1);
             while (at + count < end && byte(text, at + count) == '`') ++count;
