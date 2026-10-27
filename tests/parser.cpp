@@ -78,3 +78,35 @@ TEST(Parser, NullNormalizationPreservesOriginalByteCoordinates) {
     auto code = doc.node(doc.handle(root->children[usize(1)])).unwrap();
     EXPECT_EQ(code->literal.as_str(), "\ufffd\n"_str);
 }
+
+TEST(Parser, EmphasisPreservesAsciiAndUnicodePunctuationClasses) {
+    struct Sample {
+        ref<str> source;
+        unsigned emphasis;
+    };
+    Sample samples[] {
+        { "a_b_c"_str, 0 },
+        { "1_2_3"_str, 0 },
+        { "a*b*c"_str, 1 },
+        { "a_!_b"_str, 0 },
+        { "!_a_!"_str, 1 },
+        { "a_$_b"_str, 0 },
+        { "$_a_$"_str, 1 },
+        { "a_\u3001_b"_str, 0 },
+        { "\u3001_a_\u3001"_str, 1 },
+        { "a_\u20ac_b"_str, 0 },
+        { "\u20ac_a_\u20ac"_str, 1 },
+        { "a_\U0001f680_b"_str, 0 },
+        { "\U0001f680_a_\U0001f680"_str, 1 },
+        { "\u4e2d_a_\u6587"_str, 0 },
+        { " _a_ "_str, 1 },
+        { "_a_\n\n\u3001_b_\u3001\n\n\U0001f680_c_\U0001f680"_str, 3 },
+    };
+    for (const auto& sample : samples) {
+        auto     doc = limarkto::parse(String::make(sample.source)).unwrap();
+        unsigned count {};
+        for (usize i {}; i < doc.node_count(); ++i)
+            if (doc.node(doc.handle({ i }))->get().kind == limarkto::NodeKind::Emphasis) ++count;
+        EXPECT_EQ(count, sample.emphasis);
+    }
+}

@@ -15,17 +15,20 @@ static auto codepoint(ref<str> text, Offset at, bool previous) -> rstd::Char {
     }
     return cut(text, at, text.len().to_primitive())->chars().next().unwrap();
 }
-static auto unicode_punctuation(rstd::Char cp) -> bool {
-    if (punctuation(static_cast<unsigned>(cp.to_primitive()))) return true;
-    u16 p[] { u16('P') }, s[] { u16('S') };
-    return liunicode::property(liunicode::PropertyGroup::GeneralCategory,
-                               slice<u16>::from_raw_parts(p, usize(1)))
-               .unwrap()
-               .contains(cp.to_primitive()) ||
-           liunicode::property(liunicode::PropertyGroup::GeneralCategory,
-                               slice<u16>::from_raw_parts(s, usize(1)))
-               .unwrap()
-               .contains(cp.to_primitive());
+auto Parser::unicode_punctuation(rstd::Char cp) -> bool {
+    auto value = static_cast<unsigned>(cp.to_primitive());
+    if (value < 128) return punctuation(value);
+    if (punctuation_.is_none()) {
+        u16 p[] { u16('P') }, s[] { u16('S') };
+        punctuation_ = Some(
+            PunctuationProperties { liunicode::property(liunicode::PropertyGroup::GeneralCategory,
+                                                        slice<u16>::from_raw_parts(p, usize(1)))
+                                        .unwrap(),
+                                    liunicode::property(liunicode::PropertyGroup::GeneralCategory,
+                                                        slice<u16>::from_raw_parts(s, usize(1)))
+                                        .unwrap() });
+    }
+    return punctuation_->punctuation.contains(value) || punctuation_->symbol.contains(value);
 }
 auto html_tag_end(ref<str> text, Offset at, Offset end, ScanBudget& budget) -> Offset {
     auto     part  = cut(text, at, end);

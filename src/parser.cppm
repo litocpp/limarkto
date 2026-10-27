@@ -1,6 +1,7 @@
 module limarkto:parser;
 import :document;
 import :syntax;
+import liunicode;
 using namespace rstd::prelude;
 namespace limarkto
 {
@@ -21,6 +22,10 @@ class Parser {
         bool     opens {}, closes {};
     };
     Vec<Delimiter> delimiters_;
+    struct PunctuationProperties {
+        liunicode::Property punctuation, symbol;
+    };
+    Option<PunctuationProperties> punctuation_;
     struct PreparedTable {
         Line                header;
         Line                delimiter;
@@ -36,6 +41,7 @@ class Parser {
     auto                  trim(Line line) const -> Line;
     auto                  indentation(Line line) const -> unsigned;
     auto                  strip(Line line, unsigned columns) const -> Line;
+    auto                  unicode_punctuation(rstd::Char cp) -> bool;
     void                  blocks(Vec<Line> lines, NodeId parent, usize depth);
     void inlines(NodeId parent, const MappedText& content, Offset begin, Offset end, usize depth);
     void emphasis(NodeId parent);
