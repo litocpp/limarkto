@@ -7,7 +7,7 @@ authors = ["hypengw <hypengwip@gmail.com>"]
 [[bin]]
 name = "limarkto"
 module = "limarkto.web"
-sources = ["src/main.cppm"]
+sources = ["src/main.cppm", "src/models.cppm"]
 link-stdlib = false
 
 [profile.base]
@@ -21,7 +21,10 @@ strip = true
 
 [dependencies]
 limarkto = "0.1.0"
-rstd-json = "0.1.9"
+rstd-serde = "0.1.9"
+rstd-serde-macro = "0.1.9"
+wasmto-serde = "0.1.0"
+wasmto-serde-json = "0.1.0"
 wasmto = "0.1.0"
 wasmto-macro = "0.1.0"
 wasmto-bindgen = { version = "0.1.0", usage = "tool" }
