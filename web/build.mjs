@@ -49,14 +49,13 @@ let backup;
 try {
   await fs.mkdir(path.join(staging, 'dist'));
   for (const file of files) await fs.copyFile(file.source, path.join(staging, file.destination));
-  for (const name of ['index.js', 'index.d.ts']) await fs.copyFile(path.join(root, 'sdk', name), path.join(staging, 'dist', name));
   const metadata = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
   delete metadata.scripts;
   metadata.files.push('bundle.json');
   await fs.writeFile(path.join(staging, 'package.json'), JSON.stringify(metadata, null, 2) + '\n');
   await fs.mkdir(path.join(staging, 'licenses'));
   const licenses = [
-    ['limarkto', 'LICENSE-MIT'], ['limarkto', 'LICENSE-APACHE'], ['limarkto', 'LICENSE-entities'],
+    ['limarkto', 'LICENSE-MIT'], ['limarkto', 'LICENSE-APACHE'], ['limarkto', 'LICENSE-WHATWG'],
     ['rstd', 'LICENSE-MIT'], ['rstd', 'LICENSE-APACHE'], ['rstd', 'LICENSE-UNICODE'],
     ['rstd', 'src/runtime/compiler-rt/LICENSE.TXT'], ['rstd', 'src/runtime/dlmalloc/LICENSE'],
     ['liunicode', 'LICENSE-MIT'], ['liunicode', 'LICENSE-APACHE'], ['liunicode', 'LICENSE.unicode'],
@@ -66,18 +65,19 @@ try {
   await fs.writeFile(path.join(staging, 'NOTICE'),
     'limarkto and wasmto declare MIT OR Apache-2.0.\n' +
     'wasmto supplies the generated bindings and runtime under its declared MIT OR Apache-2.0 license.\n' +
-    'rstd, Unicode data, cmark-gfm entity data, LLVM builtins and dlmalloc notices are included in licenses/.\n');
+    'rstd, Unicode data, WHATWG entity data, LLVM builtins and dlmalloc notices are included in licenses/.\n');
   const bytes = await fs.readFile(path.join(staging, 'dist/limarkto.wasm'));
   for (const directory of [dependencies, path.resolve(root, '..'), build])
     if (bytes.includes(Buffer.from(directory + path.sep))) throw new Error('Wasm contains an unmapped local source path');
   const module = await WebAssembly.compile(bytes);
   const allowed = new Set(['rstd', 'wasmto']);
   if (WebAssembly.Module.imports(module).some(item => !allowed.has(item.module))) throw new Error('Unexpected Wasm host dependency');
-  const sdk = await import(pathToFileURL(path.join(staging, 'dist/index.js')));
-  if (sdk.packageVersion !== metadata.version || sdk.schemaVersion !== 1) throw new Error('Package metadata/SDK version mismatch');
-  await sdk.init(bytes);
+  const binding = await import(pathToFileURL(path.join(staging, 'dist/limarkto.js')));
+  await binding.init(bytes);
+  if (binding.packageVersion() !== metadata.version || binding.schemaVersion() !== 1)
+    throw new Error('Package metadata/Wasm version mismatch');
   const hashes = {};
-  for (const name of ['index.js', 'index.d.ts', 'limarkto.js', 'limarkto.d.ts', 'limarkto.wasm'])
+  for (const name of ['limarkto.js', 'limarkto.d.ts', 'limarkto.wasm'])
     hashes[`dist/${name}`] = createHash('sha256').update(await fs.readFile(path.join(staging, 'dist', name))).digest('hex');
   const revision = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
   const dirty = spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' });

@@ -2,10 +2,10 @@
   "name": "@litocpp/limarkto",
   "version": "0.1.0",
   "type": "module",
-  "license": "(MIT OR Apache-2.0) AND BSD-2-Clause AND Unicode-3.0 AND MIT-0 AND (Apache-2.0 WITH LLVM-exception)",
+  "license": "(MIT OR Apache-2.0) AND BSD-3-Clause AND Unicode-3.0 AND MIT-0 AND (Apache-2.0 WITH LLVM-exception)",
   "sideEffects": false,
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    ".": { "types": "./dist/limarkto.d.ts", "import": "./dist/limarkto.js" },
     "./limarkto.wasm": "./dist/limarkto.wasm"
   },
   "files": ["dist", "licenses", "NOTICE"],

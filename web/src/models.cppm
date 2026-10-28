@@ -58,16 +58,23 @@ enum class [[pmacro::derive("serde::derive")]] ErrorCode
     ReferenceLimit,
     ExpansionLimit,
     WorkLimit,
-    OutputLimit
+    OutputLimit,
+    InvalidSnapshot
 };
 struct [[pmacro::derive("serde::derive")]] Error {
     ErrorCode code;
     String    message;
 };
-struct [[pmacro::derive("serde::derive"), pmacro::helper("serde::derive", encode_only)]] WireNode {
+struct [[pmacro::derive("serde::derive"), pmacro::helper("serde::derive", encode_only)]]
+SourceRange {
+    u32 begin;
+    u32 end;
+};
+struct [[pmacro::derive("serde::derive"), pmacro::helper("serde::derive", encode_only)]]
+MarkdownNode {
     NodeKind       kind;
-    u32            begin;
-    u32            end;
+    SourceRange    span;
+    SourceRange    range;
     Vec<u32>       children;
     String         literal;
     String         destination;
@@ -82,10 +89,11 @@ struct [[pmacro::derive("serde::derive"), pmacro::helper("serde::derive", encode
     bool           tableHeader;
     bool           closed;
 };
-struct [[pmacro::derive("serde::derive"), pmacro::helper("serde::derive", encode_only)]] Snapshot {
-    u32           schemaVersion { 1 };
-    u32           root {};
-    Vec<WireNode> nodes;
+struct [[pmacro::derive("serde::derive"), pmacro::helper("serde::derive", encode_only)]]
+DocumentSnapshot {
+    u32               schemaVersion { 1 };
+    u32               root {};
+    Vec<MarkdownNode> nodes;
 };
 struct [[pmacro::derive("serde::derive")]] Options {
     [[pmacro::helper("serde::derive", default)]]
@@ -107,5 +115,5 @@ struct [[pmacro::derive("serde::derive")]] Options {
     [[pmacro::helper("serde::derive", default)]]
     u32 maxOutputBytes { 16777216 };
 };
-using Output = Result<Snapshot, Error>;
+using Output = Result<DocumentSnapshot, Error>;
 } // namespace limarkto::web
