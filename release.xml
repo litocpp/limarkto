@@ -1,0 +1,8 @@
+<release version="0.1.1" date="2026-11-23">
+  <description>
+    <ul>
+      <li>Add math nodes.</li>
+      <li>Cache Unicode punctuation properties in Parser.</li>
+    </ul>
+  </description>
+</release>
